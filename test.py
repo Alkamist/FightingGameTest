@@ -25,6 +25,7 @@ player_sprites = [Sprite(file_name="ppL.png") for _ in range(number_of_players)]
 
 
 def update():
+    player_controllers[0].update()
     fighting_game.update(player_controllers)
     for player_index, player_sprite in enumerate(player_sprites):
         player_position = fighting_game.players[player_index].position
@@ -42,8 +43,6 @@ while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             sys.exit()
-
-    player_controllers[0].update()
 
     fixed_timestep.update(update)
     render()
