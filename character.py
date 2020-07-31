@@ -13,13 +13,16 @@ class Character(object):
     def __init__(self, controller):
         self.controller = controller
 
-        self.run_speed = 2.2
-        self.walk_speed = 1.6
-        self.traction = 0.08
+        self.width = 8.0
+        self.height = 16.0
+
+        self.run_velocity = 2.2
+        self.walk_velocity = 1.6
+        self.ground_friction = 0.08
         self.air_friction = 0.02
         self.jump_squat_frames = 3
-        self.short_hop_speed = 2.1
-        self.full_hop_speed = 3.68
+        self.short_hop_velocity = 2.1
+        self.full_hop_velocity = 3.68
         self.gravity = 0.23
 
         self.x = 0.0
@@ -78,24 +81,25 @@ class Character(object):
             self.state = "idle"
 #            if self.state_frame > self.jump_squat_frames:
 #                self.state = "airborne"
+#
 
     def process_state(self):
         controller = self.controller
 
         if self.state == "idle":
-            self.x_velocity = apply_friction(self.x_velocity, self.traction)
+            self.x_velocity = apply_friction(self.x_velocity, self.ground_friction)
 
         elif self.state == "walk":
-            self.x_velocity = controller.x_axis.value * self.walk_speed
+            self.x_velocity = controller.x_axis.value * self.walk_velocity
 
         elif self.state == "run":
-            self.x_velocity = controller.x_axis.value * self.run_speed
+            self.x_velocity = controller.x_axis.value * self.run_velocity
 
 #        elif self.state == "jump_squat":
-#            self.x_velocity *= self.traction
+#            self.x_velocity = apply_friction(self.x_velocity, self.ground_friction)
 #
 #        elif self.state == "airborne":
 #            if self.previous_state == "jump_squat":
-#                self.y_velocity = self.full_hop_speed
+#                self.y_velocity = self.full_hop_velocity
 #
-#            self.x_velocity *= self.air_friction
+#            self.x_velocity = apply_friction(self.x_velocity, self.air_friction)

@@ -8,6 +8,7 @@ from fighting_game import FightingGame
 from digital_controller import DigitalController
 
 
+zoom = 6.0
 physics_fps = 60
 display_fps = 144
 window_width = 1000
@@ -32,16 +33,26 @@ def update():
     #    player_position = fighting_game.players[player_index].position
     #    player_sprite.update_position(player_position)
 
+    width_offset = int(0.5 * window_width)
+    height_offset = int(0.7 * window_height)
+
     display.fill(background_color)
 
+    # Draw stage ground lines.
+    for poly_line in fighting_game.stage.grounds:
+        point_list = []
+        for point in poly_line.points:
+            point_list.append((int(point.x * zoom) + width_offset, -int(point.y * zoom) + height_offset))
+        pygame.draw.lines(display, (160, 160, 160), False, point_list)
+
+    # Draw players.
     for player_index in range(number_of_players):
         player = fighting_game.players[player_index]
-        zoom = 4.0
-        rect_width = 30
-        rect_height = 50
-        rect_left = int(player.x * zoom) - int(0.5 * rect_width)
-        rect_top = -int(player.y * zoom) - rect_height
-        player_rect = pygame.Rect(rect_left, rect_top, rect_width, rect_height)
+        player_pixel_width = int(player.width * zoom)
+        player_pixel_height = int(player.height * zoom)
+        rect_left = int(player.x * zoom) - player_pixel_width + width_offset
+        rect_top = -int(player.y * zoom) - player_pixel_height + height_offset
+        player_rect = pygame.Rect(rect_left, rect_top, player_pixel_width, player_pixel_height)
         pygame.draw.rect(display, (30, 230, 30), player_rect)
 
     pygame.display.flip()
