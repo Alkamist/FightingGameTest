@@ -54,10 +54,16 @@ class Character(object):
         self.air_max_velocity = 0.83
 
         self.jump_squat_frames = 3
+        self.jump_velocity_dampening = 0.83
+        self.jump_max_horizontal_velocity = 1.7
+        self.jump_start_horizontal_velocity = 0.72
         self.short_hop_velocity = 2.1
         self.full_hop_velocity = 3.68
         self.fall_velocity = 2.8
         self.fast_fall_velocity = 3.4
+        self.extra_jump_velocity_multiplier = 1.2
+        self.extra_jump_horizontal_axis_multiplier = 0.9
+        self.extra_jumps = 1
         self.gravity = 0.23
 
         self.x = 0.0
@@ -67,12 +73,14 @@ class Character(object):
         self.state = "airborne"
         self.previous_state = "airborne"
         self.state_frame = 0
+        self.extra_jumps_left = self.extra_jumps
 
         self._should_full_hop = False
 
     def land(self):
         self.y_velocity = 0.0
         self.state = "idle"
+        self.extra_jumps_left = self.extra_jumps
         self.update()
 
     def update(self):
@@ -91,10 +99,10 @@ class Character(object):
     def decide_state(self):
         controller = self.controller
 
-        activate_jump_squat = controller.jump.just_activated or controller.short_hop.just_activated or controller.full_hop.just_activated
+        should_jump = controller.jump.just_activated or controller.short_hop.just_activated or controller.full_hop.just_activated
 
         if self.state == "idle":
-            if activate_jump_squat:
+            if should_jump:
                 self.state = "jump_squat"
             elif controller.x_axis.just_activated and not controller.tilt.is_active:
                 self.state = "dash"
@@ -102,7 +110,7 @@ class Character(object):
                 self.state = "walk"
 
         elif self.state == "walk":
-            if activate_jump_squat:
+            if should_jump:
                 self.state = "jump_squat"
             elif (controller.x_axis.just_activated or controller.x_axis.just_crossed_center) and not controller.tilt.is_active:
                 self.state = "dash"
@@ -110,7 +118,7 @@ class Character(object):
                 self.state = "idle"
 
         elif self.state == "dash":
-            if activate_jump_squat:
+            if should_jump:
                 self.state = "jump_squat"
             elif controller.x_axis.just_crossed_center and controller.tilt.is_active:
                 self.state = "walk"
@@ -125,7 +133,7 @@ class Character(object):
                 self.state = "airborne"
 
     def process_state(self):
-        controller = self.controller
+        #controller = self.controller
 
         if self.state == "idle":
             self.x_velocity = apply_friction(self.x_velocity, self.ground_friction)
@@ -140,13 +148,8 @@ class Character(object):
             self.x_velocity = apply_friction(self.x_velocity, self.ground_friction)
 
         elif self.state == "airborne":
-            if self.previous_state == "jump_squat":
-                if controller.jump.is_active or self._should_full_hop:
-                    self.y_velocity = self.full_hop_velocity
-                    self._should_full_hop = False
-                else:
-                    self.y_velocity = self.short_hop_velocity
-
+            self._handle_grounded_jump()
+            self._handle_extra_jumps()
             self._handle_horizontal_air_movement()
             self._handle_fast_fall()
             self._handle_gravity()
@@ -199,6 +202,29 @@ class Character(object):
         controller = self.controller
         if self.y_velocity <= 0.0 and controller.y_axis.value < -0.6 and controller.y_axis.active_frames < 4:
             self.y_velocity = -self.fast_fall_velocity
+
+    def _handle_grounded_jump(self):
+        controller = self.controller
+        if self.previous_state == "jump_squat":
+            # Handle changing horizontal velocity when jumping off of the ground based on stick x axis.
+            self.x_velocity = (self.x_velocity * self.jump_velocity_dampening) + (controller.x_axis.value * self.jump_start_horizontal_velocity)
+            if (abs(self.x_velocity) > self.jump_max_horizontal_velocity):
+                self.x_velocity = sign(self.x_velocity) * self.jump_max_horizontal_velocity
+
+            #Handle short hopping and full hopping.
+            if controller.jump.is_active or self._should_full_hop:
+                self.y_velocity = self.full_hop_velocity
+                self._should_full_hop = False
+            else:
+                self.y_velocity = self.short_hop_velocity
+
+    def _handle_extra_jumps(self):
+        controller = self.controller
+        should_jump = controller.jump.just_activated or controller.short_hop.just_activated or controller.full_hop.just_activated
+        if should_jump and self.extra_jumps_left > 0:
+            self.x_velocity = controller.x_axis.value * self.extra_jump_horizontal_axis_multiplier
+            self.y_velocity = self.full_hop_velocity * self.extra_jump_velocity_multiplier
+            self.extra_jumps_left -= 1
 
     def _handle_gravity(self):
         self.y_velocity -= min(self.gravity, self.fall_velocity + self.y_velocity)
