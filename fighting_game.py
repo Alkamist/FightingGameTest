@@ -30,16 +30,14 @@ class FightingGame(object):
         for player_id in range(number_of_players):
             new_player = Character(controller=player_controllers[player_id])
             new_player.x = 0.0
-            new_player.y = 0.0
+            new_player.y = 20.0
             self.players.append(new_player)
 
         self.stage = Stage(
             grounds=[
                 PolyLine([
-                    Point(-56.0, -3.5),
-                    Point(-39.0, 0.0),
-                    Point(39.0, 0.0),
-                    Point(56.0, -3.5),
+                    Point(-56.0, 0.0),
+                    Point(56.0, 0.0),
                 ]),
             ],
             ceilings=[],
@@ -50,3 +48,25 @@ class FightingGame(object):
     def update(self):
         for player in self.players:
             player.update()
+            ground_collision = self.detect_player_ground_collision(player)
+            if ground_collision[0]:
+                player.y += ground_collision[1]
+                player.land()
+
+    def detect_player_ground_collision(self, player):
+        player_half_width = 0.5 * player.width
+        player_left = player.x - player_half_width
+        player_right = player.x + player_half_width
+        player_bottom = player.y
+        player_top = player.y + player.height
+
+        for poly_line in self.stage.grounds:
+            previous_point = None
+            for point in poly_line.points:
+                if previous_point is not None:
+                    if player_right >= previous_point.x and player_left <= point.x \
+                    and player_bottom < point.y and player_top >= point.y:
+                        return True, previous_point.y - player_bottom
+                previous_point = point
+
+        return False, 0.0
