@@ -93,7 +93,7 @@ class Character(object):
             if controller.jump.just_activated:
                 self.state = "jump_squat"
             elif controller.x_axis.just_activated and not controller.tilt.is_active:
-                self.state = "run"
+                self.state = "dash"
             elif controller.x_axis.is_active:
                 self.state = "walk"
 
@@ -101,11 +101,11 @@ class Character(object):
             if controller.jump.just_activated:
                 self.state = "jump_squat"
             elif (controller.x_axis.just_activated or controller.x_axis.just_crossed_center) and not controller.tilt.is_active:
-                self.state = "run"
+                self.state = "dash"
             else:
                 self.state = "idle"
 
-        elif self.state == "run":
+        elif self.state == "dash":
             if controller.jump.just_activated:
                 self.state = "jump_squat"
             elif controller.x_axis.just_crossed_center and controller.tilt.is_active:
@@ -114,7 +114,7 @@ class Character(object):
                 self.state = "idle"
 
         elif self.state == "jump_squat":
-            if self.state_frame > self.jump_squat_frames:
+            if self.state_frame >= self.jump_squat_frames:
                 self.state = "airborne"
 
     def process_state(self):
@@ -124,49 +124,73 @@ class Character(object):
             self.x_velocity = apply_friction(self.x_velocity, self.ground_friction)
 
         elif self.state == "walk":
-            if abs(self.x_velocity) < self.walk_start_velocity:
-                self.x_velocity = sign(controller.x_axis.value) * self.walk_start_velocity
+            self._handle_walk_movement()
 
-            self.x_velocity = apply_acceleration(
-                self.x_velocity,
-                controller.x_axis.value,
-                self.walk_base_acceleration,
-                self.walk_axis_acceleration,
-                self.walk_max_velocity,
-                self.ground_friction,
-            )
-
-        elif self.state == "run":
-            if abs(self.x_velocity) < self.dash_start_velocity:
-                self.x_velocity = sign(controller.x_axis.value) * self.dash_start_velocity
-
-            self.x_velocity = apply_acceleration(
-                self.x_velocity,
-                controller.x_axis.value,
-                self.dash_base_acceleration,
-                self.dash_axis_acceleration,
-                self.dash_max_velocity,
-                self.ground_friction,
-            )
+        elif self.state == "dash":
+            self._handle_dash_movement()
 
         elif self.state == "jump_squat":
             self.x_velocity = apply_friction(self.x_velocity, self.ground_friction)
 
         elif self.state == "airborne":
             if self.previous_state == "jump_squat":
-                self.y_velocity = self.full_hop_velocity
+                if controller.jump.is_active:
+                    self.y_velocity = self.full_hop_velocity
+                else:
+                    self.y_velocity = self.short_hop_velocity
 
-            if controller.x_axis.is_active:
-                self.x_velocity = apply_acceleration(
-                    self.x_velocity,
-                    controller.x_axis.value,
-                    self.air_base_acceleration,
-                    self.air_axis_acceleration,
-                    self.air_max_velocity,
-                    self.air_friction,
-                )
-            else:
-                self.x_velocity = apply_friction(self.x_velocity, self.air_friction)
+            self._handle_horizontal_air_movement()
+            self._handle_fast_fall()
+            self._handle_gravity()
 
-            self.y_velocity -= self.gravity
-            self.y_velocity = max(self.y_velocity, -self.fall_velocity)
+    def _handle_walk_movement(self):
+        controller = self.controller
+
+        if abs(self.x_velocity) < self.walk_start_velocity:
+            self.x_velocity = sign(controller.x_axis.value) * self.walk_start_velocity
+
+        self.x_velocity = apply_acceleration(
+            self.x_velocity,
+            controller.x_axis.value,
+            self.walk_base_acceleration,
+            self.walk_axis_acceleration,
+            self.walk_max_velocity,
+            self.ground_friction,
+        )
+
+    def _handle_dash_movement(self):
+        controller = self.controller
+
+        if abs(self.x_velocity) < self.dash_start_velocity:
+            self.x_velocity = sign(controller.x_axis.value) * self.dash_start_velocity
+
+        self.x_velocity = apply_acceleration(
+            self.x_velocity,
+            controller.x_axis.value,
+            self.dash_base_acceleration,
+            self.dash_axis_acceleration,
+            self.dash_max_velocity,
+            self.ground_friction,
+        )
+
+    def _handle_horizontal_air_movement(self):
+        controller = self.controller
+        if controller.x_axis.is_active:
+            self.x_velocity = apply_acceleration(
+                self.x_velocity,
+                controller.x_axis.value,
+                self.air_base_acceleration,
+                self.air_axis_acceleration,
+                self.air_max_velocity,
+                self.air_friction,
+            )
+        else:
+            self.x_velocity = apply_friction(self.x_velocity, self.air_friction)
+
+    def _handle_fast_fall(self):
+        controller = self.controller
+        if self.y_velocity <= 0.0 and controller.y_axis.value < -0.6 and controller.y_axis.active_frames < 4:
+            self.y_velocity = -self.fast_fall_velocity
+
+    def _handle_gravity(self):
+        self.y_velocity -= min(self.gravity, self.fall_velocity + self.y_velocity)
