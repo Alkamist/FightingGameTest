@@ -35,11 +35,11 @@ class DigitalController(object):
         self.actions = self.key_binds.actions
         self.x_axis = ButtonAxis()
         self.y_axis = ButtonAxis()
-        self.tilt = self.actions["tilt"]
-        self.jump = self.actions["jump"]
-        self.attack = self.actions["attack"]
+
+        for action_name in KEY_BINDS:
+            setattr(self, action_name, self.key_binds.actions[action_name])
 
     def update(self):
         self.key_binds.update()
-        self.x_axis.update(self.actions["left"].is_active, self.actions["right"].is_active)
-        self.y_axis.update(self.actions["down"].is_active, self.actions["up"].is_active)
+        self.x_axis.update(self.left.is_active, self.right.is_active)
+        self.y_axis.update(self.down.is_active, self.up.is_active)
