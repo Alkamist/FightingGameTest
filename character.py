@@ -68,6 +68,8 @@ class Character(object):
         self.previous_state = "airborne"
         self.state_frame = 0
 
+        self._should_full_hop = False
+
     def land(self):
         self.y_velocity = 0.0
         self.state = "idle"
@@ -89,8 +91,10 @@ class Character(object):
     def decide_state(self):
         controller = self.controller
 
+        activate_jump_squat = controller.jump.just_activated or controller.short_hop.just_activated or controller.full_hop.just_activated
+
         if self.state == "idle":
-            if controller.jump.just_activated:
+            if activate_jump_squat:
                 self.state = "jump_squat"
             elif controller.x_axis.just_activated and not controller.tilt.is_active:
                 self.state = "dash"
@@ -98,7 +102,7 @@ class Character(object):
                 self.state = "walk"
 
         elif self.state == "walk":
-            if controller.jump.just_activated:
+            if activate_jump_squat:
                 self.state = "jump_squat"
             elif (controller.x_axis.just_activated or controller.x_axis.just_crossed_center) and not controller.tilt.is_active:
                 self.state = "dash"
@@ -106,7 +110,7 @@ class Character(object):
                 self.state = "idle"
 
         elif self.state == "dash":
-            if controller.jump.just_activated:
+            if activate_jump_squat:
                 self.state = "jump_squat"
             elif controller.x_axis.just_crossed_center and controller.tilt.is_active:
                 self.state = "walk"
@@ -114,6 +118,9 @@ class Character(object):
                 self.state = "idle"
 
         elif self.state == "jump_squat":
+            if controller.full_hop.is_active:
+                self._should_full_hop = True
+
             if self.state_frame >= self.jump_squat_frames:
                 self.state = "airborne"
 
@@ -134,8 +141,9 @@ class Character(object):
 
         elif self.state == "airborne":
             if self.previous_state == "jump_squat":
-                if controller.jump.is_active:
+                if controller.jump.is_active or self._should_full_hop:
                     self.y_velocity = self.full_hop_velocity
+                    self._should_full_hop = False
                 else:
                     self.y_velocity = self.short_hop_velocity
 

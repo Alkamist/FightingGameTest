@@ -10,7 +10,9 @@ KEY_BINDS = {
     "down" : pygame.K_s,
     "up" : pygame.K_w,
     "tilt" : pygame.K_LSHIFT,
-    "jump" : pygame.K_LEFTBRACKET,
+    "jump" : None,
+    "short_hop" : pygame.K_LEFTBRACKET,
+    "full_hop" : pygame.K_BACKSLASH,
     "attack" : pygame.K_SEMICOLON,
 }
 
@@ -26,7 +28,10 @@ class KeyBinds(object):
         pressed_keys = pygame.key.get_pressed()
         for action_name, action in self.actions.items():
             action_key = KEY_BINDS[action_name]
-            action.update(bool(pressed_keys[action_key]))
+            if action_key is not None:
+                action.update(bool(pressed_keys[action_key]))
+            else:
+                action.update(False)
 
 
 class DigitalController(object):
