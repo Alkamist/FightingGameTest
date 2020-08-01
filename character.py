@@ -74,6 +74,7 @@ class Character(object):
         self.previous_state = "airborne"
         self.state_frame = 0
         self.extra_jumps_left = self.extra_jumps
+        self.is_facing_right = True
 
         self._should_full_hop = False
 
@@ -133,15 +134,23 @@ class Character(object):
                 self.state = "airborne"
 
     def process_state(self):
-        #controller = self.controller
+        controller = self.controller
 
         if self.state == "idle":
             self.x_velocity = apply_friction(self.x_velocity, self.ground_friction)
 
         elif self.state == "walk":
+            if controller.x_axis.value < 0.0:
+                self.is_facing_right = False
+            else:
+                self.is_facing_right = True
             self._handle_walk_movement()
 
         elif self.state == "dash":
+            if controller.x_axis.value < 0.0:
+                self.is_facing_right = False
+            else:
+                self.is_facing_right = True
             self._handle_dash_movement()
 
         elif self.state == "jump_squat":

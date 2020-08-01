@@ -52,8 +52,14 @@ def update():
         player_pixel_height = int(player.height * zoom)
         rect_left = int(player.x * zoom) - player_pixel_width + width_offset
         rect_top = -int(player.y * zoom) - player_pixel_height + height_offset
+
         player_rect = pygame.Rect(rect_left, rect_top, player_pixel_width, player_pixel_height)
         pygame.draw.rect(display, (30, 230, 30), player_rect)
+
+        player_face_rect_width = 15
+        player_face_rect_left = rect_left + 1 if not player.is_facing_right else rect_left + player_pixel_width - player_face_rect_width - 1
+        player_face_rect = pygame.Rect(player_face_rect_left, rect_top + 1, player_face_rect_width, player_pixel_height - 2)
+        pygame.draw.rect(display, (230, 30, 30), player_face_rect)
 
     pygame.display.flip()
 
